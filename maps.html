@@ -340,6 +340,7 @@ function valid(coords) {
 const coordText = c => `${c[1].toFixed(6)}, ${c[0].toFixed(6)}`;
 const apiCoord = c => `${c[1]},${c[0]}`;
 const fields = { origin: null, destination: null };
+const travelNames = { car: 'Driving', pedestrian: 'Walking', bicycle: 'Cycling', transit: 'Public transit' };
 const pins = new Map();
 const storageKey = 'aidroom-map-saved-pins-v1';
 
@@ -535,7 +536,10 @@ function addPin(data, color = '#125b70') {
 }
 
 function clearRoute(invalidate = true) {
-  if (invalidate) routeVersion++;
+  if (invalidate) {
+    routeVersion++;
+    $('routeButton').disabled = false;
+  }
   routeData = [];
   map.getSource('trip')?.setData({
     type: 'FeatureCollection',
@@ -579,7 +583,14 @@ for (const which of ['origin', 'destination']) {
   });
 }
 
-$('mode').addEventListener('change', () => clearRoute());
+$('mode').addEventListener('change', () => {
+  clearRoute();
+  if ($('origin').value.trim() && $('destination').value.trim()) {
+    planTrip();
+  } else {
+    message(`${travelNames[$('mode').value]} selected. Enter a starting point and destination to plan your trip.`);
+  }
+});
 
 map.on('click', event => {
   if (event.originalEvent.target.closest(
@@ -782,7 +793,7 @@ function renderRoute(index) {
 
   const totals = routeTotals(route);
   $('summary').textContent =
-    `${duration(totals.seconds)} · ${distance(totals.length)}`;
+    `${travelNames[$('mode').value]} · ${duration(totals.seconds)} · ${distance(totals.length)}`;
   $('instructions').replaceChildren();
 
   const bounds = new maplibregl.LngLatBounds();
@@ -903,8 +914,8 @@ async function resolveField(which) {
   return results[0];
 }
 
-$('routeForm').addEventListener('submit', async event => {
-  event.preventDefault();
+async function planTrip(event) {
+  event?.preventDefault();
 
   if (!map.getSource('trip')) {
     message('The map is still loading. Please try again.', true);
@@ -914,7 +925,7 @@ $('routeForm').addEventListener('submit', async event => {
   const version = ++routeVersion;
   $('routeButton').disabled = true;
   clearRoute(false);
-  message('Planning your trip…');
+  message(`Planning your ${travelNames[$('mode').value].toLowerCase()} trip…`);
 
   try {
     const start = await resolveField('origin');
@@ -976,14 +987,15 @@ $('routeForm').addEventListener('submit', async event => {
       $('routeOptions').append(node);
     });
 
-    message('Trip ready. Route and written directions are shown below.');
+    message(`${travelNames[mode]} route ready. Route and written directions are shown below.`);
     renderRoute(0);
   } catch (error) {
     if (version === routeVersion) message(error.message, true);
   } finally {
-    $('routeButton').disabled = false;
+    if (version === routeVersion) $('routeButton').disabled = false;
   }
-});
+}
+$('routeForm').addEventListener('submit', planTrip);
 
 $('locate').addEventListener('click', () => {
   if (!navigator.geolocation || !window.isSecureContext) {
