@@ -14,3 +14,8 @@ Map links render immediately from map-pins.js, loaded before app.js. No visitor-
 
 
 Full address audit (2026-10-10): all 13,366 cards checked. 10,370 contain physical street addresses, including location-list fields. 10,236 have saved map pins that render immediately. 134 cards at 80 unique addresses still need address correction or precise location confirmation; no guessed town-centre pins are used. Address parsing handles unusual street names, fractional roads, units, Unicode, and multiple-location notes. Confirm precise coordinates before adding an unmatched address to map-pins.js.
+
+## Mission page design
+
+About, Help, Volunteer, and Donate use mission.css and mission.js for their responsive photo layouts and optional reduced-motion-aware animation. Header/footer markup and the shared site styles are unchanged. The Resource Navigator and Maps do not load these files. Licensed illustrative stock imagery is documented in PHOTO-CREDITS.md. Page-specific titles, descriptions, canonical links, social previews, and organization/page structured data are included. robots.txt points to sitemap.xml, which lists the main public pages and omits the hidden Maps page. The Help intake service and credentialless iframe are unchanged.
+
