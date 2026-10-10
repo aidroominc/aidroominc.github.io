@@ -268,6 +268,8 @@ details summary {
       Powered by
       <a href="https://www.geoapify.com/"
          target="_blank" rel="noopener">Geoapify</a>
+      · Walking routes: <a href="https://routing.openstreetmap.de/about.html" target="_blank" rel="noopener">FOSSGIS / OSRM</a>
+      · <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener">Fix the map</a>
       ·
       <a href="https://www.openstreetmap.org/copyright"
          target="_blank" rel="noopener">© OpenStreetMap contributors</a>
@@ -620,7 +622,7 @@ async function request(base, params, options = {}) {
     }
   }
 
-  url.searchParams.set('apiKey', GEOAPIFY_API_KEY);
+  if (options.apiKey !== false) url.searchParams.set('apiKey', GEOAPIFY_API_KEY);
 
   for (let attempt = 0; attempt < (options.retry ? 2 : 1); attempt++) {
     const controller = new AbortController();
@@ -833,7 +835,7 @@ function renderRoute(index) {
       if (!text) continue;
 
       const item = el('li', text);
-      const point = lines[i]?.[step.from_index];
+      const point = step.location || lines[i]?.[step.from_index];
 
       if (point) {
         item.append(' ', button('Show', () =>
@@ -923,6 +925,62 @@ async function resolveField(which) {
   return results[0];
 }
 
+function walkingInstruction(step) {
+  const maneuver = step.maneuver || {};
+  const road = step.name ? ' onto ' + step.name : '';
+  const modifier = maneuver.modifier || '';
+  if (maneuver.type === 'depart') return 'Start walking' + (step.name ? ' on ' + step.name : '') + '.';
+  if (maneuver.type === 'arrive') return 'You have arrived at your destination' + (modifier ? ' on the ' + modifier : '') + '.';
+  if (maneuver.type === 'roundabout' || maneuver.type === 'rotary') {
+    return 'At the roundabout, ' + (maneuver.exit ? 'take exit ' + maneuver.exit : 'continue') + road + '.';
+  }
+  if (maneuver.type === 'exit roundabout' || maneuver.type === 'exit rotary') return 'Exit the roundabout' + road + '.';
+  if (modifier === 'uturn') return 'Make a U-turn' + road + '.';
+  if (maneuver.type === 'fork') return 'Keep ' + (modifier || 'straight') + road + '.';
+  if (modifier && modifier !== 'straight') return 'Turn ' + modifier + road + '.';
+  return 'Continue' + (step.name ? ' on ' + step.name : ' along the path') + '.';
+}
+
+function walkingFeatures(data) {
+  if (data.code !== 'Ok' || !data.routes?.length) throw Error('No walking route was found between these locations.');
+  return { features: data.routes.map(route => {
+    if (route.geometry?.type !== 'LineString' || route.geometry.coordinates.length < 2) throw Error('No walking route geometry was returned.');
+    return {
+      type: 'Feature', geometry: route.geometry,
+      properties: {
+        distance: route.distance, time: route.duration,
+        legs: (route.legs || []).map(leg => ({ steps: (leg.steps || []).map(step => ({
+          instruction: { text: walkingInstruction(step) },
+          location: step.maneuver?.location
+        })) }))
+      }
+    };
+  }) };
+}
+
+const walkingCache = new Map();
+let lastWalkingRequest = 0;
+async function walkingRoute(start, end, isCurrent) {
+  const coordinates = start.join(',') + ';' + end.join(',');
+  const cached = walkingCache.get(coordinates);
+  if (cached && Date.now() - cached.time < 600000) return cached.data;
+  // The dedicated foot server uses a walking network, regardless of the API's profile token.
+  // Keep requests below the community service's one-request-per-second limit.
+  const scheduled = Math.max(Date.now(), lastWalkingRequest + 1100);
+  lastWalkingRequest = scheduled;
+  const wait = scheduled - Date.now();
+  if (wait) await new Promise(resolve => setTimeout(resolve, wait));
+  if (!isCurrent()) throw Error('Trip changed.');
+  const data = walkingFeatures(await request(
+    'https://routing.openstreetmap.de/routed-foot/route/v1/driving/' + coordinates,
+    { overview: 'full', geometries: 'geojson', steps: true },
+    { timeout: 15000, apiKey: false }
+  ));
+  if (walkingCache.size >= 30) walkingCache.delete(walkingCache.keys().next().value);
+  walkingCache.set(coordinates, { time: Date.now(), data });
+  return data;
+}
+
 async function planTrip(event) {
   event?.preventDefault();
 
@@ -956,7 +1014,16 @@ async function planTrip(event) {
       transit: 'transit'
     };
 
-    const response = await request(
+    let response;
+    if (mode === 'pedestrian') {
+      try {
+        response = await walkingRoute(start.coordinates, end.coordinates, () => version === routeVersion);
+      } catch (error) {
+        if (version !== routeVersion) return;
+        message('Trying the backup walking directions service…');
+      }
+    }
+    if (!response) response = await request(
       'https://api.geoapify.com/v1/routing',
       {
         waypoints:
