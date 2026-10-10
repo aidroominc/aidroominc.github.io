@@ -15,11 +15,20 @@ function updateZipHelp(){const raw=$("#zipFilter").value.trim();const invalid=ra
 function apply(){const terms=tokenize(state.query);state.filtered=state.resources.map(r=>({...r,_score:score(r,terms)})).filter(r=>(!terms.length||r._score>0)&&(!state.category||String(r.categoryNumber)===state.category)&&(!state.area||r.searchText.includes(state.area.toLowerCase()))&&zipMatches(r,state.zip)&&(!state.free||/\bfree\b|no fee|without charge/.test(r.searchText))&&(!state.open||/24\s*\/\s*7|24 hours|24\/7\/365/.test(r.searchText)));if(state.sort==="title")state.filtered.sort((a,b)=>a.title.localeCompare(b.title));else if(state.sort==="category")state.filtered.sort((a,b)=>a.categoryNumber-b.categoryNumber||a.title.localeCompare(b.title));else state.filtered.sort((a,b)=>b._score-a._score||a.number-b.number);render()}
 function mapAddress(r){
  const raw=(r.fields['physical address']||'').trim();
- if(!raw||/confidential|no physical|not (?:available|confirmed|provided|stated|listed|specified)|unknown|state\s*wide|nation\s*wide|online only|virtual only/i.test(raw))return '';
- for(const part of raw.split(/[;\n]/)){
-  if(/\bP\.?\s*O\.?\s*Box\b|\bPost Office Box\b|mailing|client services NOT offered|\bvaries\b/i.test(part))continue;
-  const match=part.match(/\b\d{1,6}[a-z]?(?:-\d+)?\s+(?:(?:[NSEW]\.?|North|South|East|West)\s+)?(?:[\w.'-]+\s+){0,6}(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Highway|Hwy|Parkway|Pkwy|Lane|Ln|Drive|Dr|Court|Ct|Place|Pl|Way|Circle|Cir|Trail|Trl|Terrace|Ter|Broadway)\b[^;\n]*/i);
-  if(match)return match[0].trim();
+
+ // Evaluate each listed location separately: a PO box or service-area note must not hide a real office.
+ for(let part of raw.replace(/\.\s+Mailing address:/gi,';Mailing address:').split(/[;\n]/)){
+  if(/confidential|no physical|\bP\.?\s*O\.?\s*Box\b|\bPost Office Box\b|mailing|client services NOT offered|\bvaries\b|past locations/i.test(part))continue;
+  part=part.replace(/\([^)]*(?:\)|$)/g,'').trim();
+  const match=part.match(/\b\d{1,6}[a-z]?(?:-\d+)?\s+(?:[^,;\n]+),\s*[^;\n]+/i);
+  if(!match)continue;
+  let address=match[0].replace(/\.\s+(?:Behavioral health|Mailing|Not confirmed|Contact|Call|Visit)\b.*$/i,'').replace(/[.\s]+$/,'');
+  if(!/[A-Za-zÀ-ž]/.test(address.split(',')[0])||/\b(?:resources?|hotline|hours?|zip codes?|phone)\b/i.test(address.split(',')[0]))continue;
+  const zipEnd=address.match(/^.*?,.*?(?:,\s*|\b[A-Z]{2}\s+)\d{5}(?:-\d{4})?\b/);
+  return zipEnd?zipEnd[0]:address;
+ }
+ for(const [key,value] of Object.entries(r.fields)){
+  if(key!=='physical address'&&/^(?:location listings|key locations|locations \()/i.test(key)){const address=mapAddress({fields:{'physical address':value}});if(address)return address;}
  }
  return '';
 }

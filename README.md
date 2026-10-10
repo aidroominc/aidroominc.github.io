@@ -11,3 +11,6 @@ Keep a downloadable backup of this repository. Domain renewal is separate from f
 
 Map links render immediately from map-pins.js, loaded before app.js. No visitor-side geocoding is used for directory cards. Pins are keyed by the exact physical address, so changing an address cannot reuse a stale pin. When adding or editing addresses, refresh the saved pin dataset before publishing; unmatched addresses have no Maps link. Saved Census matches locate the street address and may be interpolated rather than a building entrance.
 
+
+
+Full address audit (2026-10-10): all 13,366 cards checked. 10,370 contain physical street addresses, including location-list fields. 10,236 have saved map pins that render immediately. 134 cards at 80 unique addresses still need address correction or precise location confirmation; no guessed town-centre pins are used. Address parsing handles unusual street names, fractional roads, units, Unicode, and multiple-location notes. Confirm precise coordinates before adding an unmatched address to map-pins.js.
