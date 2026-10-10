@@ -1,6 +1,1084 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Google Maps widget — Aid Room</title><style>*{box-sizing:border-box}body{margin:0;font:16px system-ui;background:#0a2230;color:white;display:flex;flex-direction:column;height:100dvh}header{padding:16px 20px;flex:none}h1{font-size:20px;margin:0}p{margin:8px 0 0;line-height:1.4}.help{font-size:14px;color:#c8d9de}iframe{display:block;width:100%;flex:1;min-height:320px;border:0;background:white}</style></head><body><header><h1>Google Maps</h1><p id="address"></p><p class="help">Explore this map here. Drag to move around, or use the map controls to zoom.</p></header><iframe id="map" title="Resource location on Google Maps" sandbox="allow-scripts allow-same-origin allow-presentation" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe><script>
-const query=new URLSearchParams(location.search).get('q')||'';
-document.getElementById('address').textContent=query||'No location provided.';
-if(query)document.getElementById('map').src='https://www.google.com/maps?q='+encodeURIComponent(query)+'&output=embed';
-</script></body></html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maps | Aid Room</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.css">
+
+<style>
+:root {
+  font-family: Arial, sans-serif;
+  color: #152d39;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+button, input, select { font: inherit; }
+button, a, input, select { touch-action: manipulation; }
+button { cursor: pointer; }
+button:disabled { cursor: wait; opacity: .55; }
+
+input, select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #b8cad0;
+  border-radius: 7px;
+  background: white;
+  color: #152d39;
+}
+input:focus, button:focus-visible, select:focus {
+  outline: 3px solid #77d9dd;
+  outline-offset: 2px;
+}
+button {
+  padding: 10px 12px;
+  border: 1px solid #b8cad0;
+  border-radius: 7px;
+  background: white;
+  color: #152d39;
+}
+.primary {
+  background: #125b70;
+  color: white;
+  border-color: #125b70;
+}
+#app {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+}
+aside {
+  overflow: auto;
+  padding: 16px;
+  background: #f8fbfc;
+  border-right: 1px solid #d6e3e7;
+}
+h1 { font-size: 21px; margin: 0 0 6px; }
+h2 { font-size: 16px; margin: 19px 0 9px; }
+p { line-height: 1.45; }
+.small { font-size: 12px; color: #526b77; }
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: bold;
+  margin: 9px 0 5px;
+}
+.row { display: flex; gap: 7px; margin: 8px 0; }
+.row > * { flex: 1; min-width: 0; }
+.wide { width: 100%; margin: 7px 0; }
+#mapWrap { position: relative; min-height: 250px; }
+#map { position: absolute; inset: 0; }
+#status {
+  font-size: 13px;
+  line-height: 1.45;
+  min-height: 20px;
+  margin: 8px 0;
+  color: #125b70;
+}
+#status.error { color: #a12821; }
+
+.result, .saved {
+  border: 1px solid #d6e3e7;
+  border-radius: 7px;
+  background: white;
+  padding: 10px;
+  margin: 7px 0;
+}
+.result strong, .saved strong {
+  display: block;
+  font-size: 14px;
+}
+.result p { font-size: 12px; margin: 5px 0; }
+.result button, .saved button {
+  font-size: 12px;
+  padding: 7px;
+}
+.result .row, .saved .row { margin-bottom: 0; }
+
+.maplibregl-popup-content {
+  max-width: 250px;
+  font: 13px Arial, sans-serif;
+  padding: 13px;
+}
+.maplibregl-popup-content h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+.maplibregl-popup-content p { margin: 5px 0; }
+.maplibregl-popup-content button {
+  padding: 7px;
+  margin: 4px 3px 0 0;
+  font-size: 12px;
+}
+#summary {
+  font-weight: bold;
+  font-size: 14px;
+  padding: 8px 0;
+}
+#instructions ol {
+  padding-left: 22px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+#instructions li { margin: 9px 0; }
+#instructions h3 { font-size: 14px; margin: 15px 0 5px; }
+footer { font-size: 11px; line-height: 1.6; margin-top: 20px; }
+footer a { color: #125b70; }
+#routeOptions { flex-wrap: wrap; }
+#routeOptions button { font-size: 12px; }
+#routeOptions button[aria-pressed="true"] {
+  background: #125b70;
+  color: white;
+}
+#clickMode {
+  position: absolute;
+  bottom: 38px;
+  left: 10px;
+  z-index: 2;
+  background: white;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  box-shadow: 0 1px 8px #0002;
+  pointer-events: none;
+}
+#mapTools {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  display: flex;
+  gap: 5px;
+}
+#mapTools button { font-size: 12px; background: white; }
+details summary {
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  margin-top: 15px;
+}
+
+@media (max-width: 700px) {
+  #app {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(240px, 46%) minmax(250px, 1fr);
+  }
+  #mapWrap { grid-row: 1; }
+  aside {
+    grid-row: 2;
+    border-right: 0;
+    border-top: 1px solid #d6e3e7;
+    padding: 12px;
+  }
+  h1 { font-size: 18px; }
+  #clickMode { max-width: 70%; }
+}
+
+@media print {
+  #mapTools, #clickMode, form, .row, button, footer {
+    display: none !important;
+  }
+  #app { display: block; height: auto; }
+  aside { overflow: visible; width: 100%; }
+  #mapWrap { height: 450px; }
+  #map { position: relative; height: 450px; }
+}
+</style>
+</head>
+
+<body>
+<div id="app">
+  <aside>
+    <a href="index.html" style="display:inline-block;margin-bottom:14px;color:#125b70">← Back to Resource Navigator</a>
+<h1>Maps</h1>
+<p id="resourceName" style="font-weight:bold"></p>
+    <p class="small">
+      Search for an address or place, select a result,
+      or click the map to drop a pin.
+    </p>
+
+    <form id="searchForm">
+      <label for="search">Search places or addresses</label>
+      <div class="row">
+        <input id="search" placeholder="Denver Public Library"
+               maxlength="250" required>
+        <button class="primary" id="searchButton"
+                type="submit">Search</button>
+      </div>
+    </form>
+
+    <div id="status" role="status" aria-live="polite"></div>
+    <div id="results" aria-label="Search results"></div>
+
+    <h2>Directions</h2>
+    <form id="routeForm">
+      <label for="origin">Starting point</label>
+      <input id="origin" placeholder="Address, place, or a selected pin"
+             maxlength="250" required autocomplete="off">
+
+      <div class="row">
+        <button id="locate" type="button">Use my location</button>
+        <button id="swap" type="button">Swap start / end</button>
+      </div>
+
+      <label for="destination">Destination</label>
+      <input id="destination"
+             placeholder="Address, place, or a selected pin"
+             maxlength="250" required autocomplete="off">
+
+      <label for="mode">Travel by</label>
+      <select id="mode">
+        <option value="car">Car</option>
+        <option value="transit">Public transit (coverage varies)</option>
+        <option value="pedestrian">Walking</option>
+        <option value="bicycle">Cycling</option>
+      </select>
+
+      <p class="small">
+        Transit is offered where provider data is available.
+        Live departure times are not verified.
+      </p>
+
+      <button class="primary wide" id="routeButton" type="submit">
+        Show directions on this map
+      </button>
+    </form>
+
+    <div class="row">
+      <button id="clearRoute" type="button">Clear route</button>
+      <button id="print" type="button">Print</button>
+    </div>
+
+    <div id="routeOptions" class="row" aria-label="Routes"></div>
+    <div id="summary" aria-live="polite"></div>
+    <div id="instructions"></div>
+
+    <details>
+      <summary>Saved pins <span id="pinCount"></span></summary>
+      <p class="small">
+        Saved on this browser when storage is available.
+        Use a pin's popup to name, save, or remove it.
+      </p>
+      <div id="saved"></div>
+    </details>
+
+    <footer>
+      Powered by
+      <a href="https://www.geoapify.com/"
+         target="_blank" rel="noopener">Geoapify</a>
+      ·
+      <a href="https://www.openstreetmap.org/copyright"
+         target="_blank" rel="noopener">© OpenStreetMap contributors</a>
+      <p class="small">
+        Trip estimates and written directions; not live GPS navigation.
+      </p>
+    </footer>
+  </aside>
+
+  <main id="mapWrap" aria-label="Interactive map">
+    <div id="map"></div>
+    <div id="mapTools">
+      <button id="home" type="button">Colorado</button>
+      <button id="fitPins" type="button">Fit pins</button>
+    </div>
+    <div id="clickMode">Click the map to drop a pin</div>
+  </main>
+</div>
+
+<script type="module">
+import * as maplibregl from
+  'https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.mjs';
+
+const GEOAPIFY_API_KEY = '95b8b4ee8f2b42c685a7cd99d2872b8c';
+
+// Optional permanent resource pins.
+// Coordinates must be [longitude, latitude].
+const RESOURCE_PINS = [
+  // {
+  //   name: 'Resource name',
+  //   address: 'Full address',
+  //   coordinates: [-104.99, 39.74]
+  // }
+];
+
+const $ = id => document.getElementById(id);
+
+function message(text, error = false) {
+  $('status').textContent = text;
+  $('status').classList.toggle('error', error);
+}
+
+function el(tag, text, cls) {
+  const node = document.createElement(tag);
+  if (text !== undefined) node.textContent = text;
+  if (cls) node.className = cls;
+  return node;
+}
+
+function button(text, action) {
+  const node = el('button', text);
+  node.type = 'button';
+  node.addEventListener('click', action);
+  return node;
+}
+
+function valid(coords) {
+  return Array.isArray(coords) &&
+    coords.length === 2 &&
+    coords.every(Number.isFinite) &&
+    Math.abs(coords[0]) <= 180 &&
+    Math.abs(coords[1]) <= 90;
+}
+
+const coordText = c => `${c[1].toFixed(6)}, ${c[0].toFixed(6)}`;
+const apiCoord = c => `${c[1]},${c[0]}`;
+const fields = { origin: null, destination: null };
+const pins = new Map();
+const storageKey = 'aidroom-map-saved-pins-v1';
+
+let saved = [];
+let serial = 0;
+let searchPins = [];
+let endpointPins = {};
+let routeData = [];
+let routeVersion = 0;
+let locationVersion = 0;
+
+try {
+  const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
+  if (Array.isArray(stored)) {
+    saved = stored.filter(p =>
+      p && valid(p.coordinates) && typeof p.name === 'string'
+    ).slice(0, 200);
+  }
+} catch {}
+
+const map = new maplibregl.Map({
+  container: 'map',
+  style: 'https://tiles.openfreemap.org/styles/liberty',
+  center: [-105.55, 39],
+  zoom: 6,
+  attributionControl: true
+});
+
+map.addControl(new maplibregl.NavigationControl(), 'top-right');
+map.addControl(
+  new maplibregl.ScaleControl({ unit: 'imperial' }),
+  'bottom-left'
+);
+
+new ResizeObserver(() => map.resize()).observe($('map'));
+
+map.on('load', () => {
+  map.addSource('trip', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] }
+  });
+
+  map.addLayer({
+    id: 'trip-outline',
+    type: 'line',
+    source: 'trip',
+    paint: { 'line-color': '#fff', 'line-width': 8 },
+    layout: { 'line-join': 'round', 'line-cap': 'round' }
+  });
+
+  map.addLayer({
+    id: 'trip-line',
+    type: 'line',
+    source: 'trip',
+    paint: { 'line-color': ['get', 'color'], 'line-width': 5 },
+    layout: { 'line-join': 'round', 'line-cap': 'round' }
+  });
+});
+
+function persist() {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(saved));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function renderSaved() {
+  $('saved').replaceChildren();
+  $('pinCount').textContent = `(${saved.length})`;
+
+  if (!saved.length) {
+    $('saved').append(el('p', 'No saved pins yet.', 'small'));
+  }
+
+  for (const p of saved) {
+    const card = el('div', undefined, 'saved');
+    card.append(el('strong', p.name));
+    const row = el('div', undefined, 'row');
+
+    row.append(
+      button('Show', () => {
+        let id = [...pins].find(
+          ([, value]) => value.data.savedId === p.id
+        )?.[0];
+
+        if (!id) {
+          id = addPin({ ...p, savedId: p.id }, '#9657b3');
+        }
+
+        map.flyTo({ center: p.coordinates, zoom: 14 });
+        const popup = pins.get(id).marker.getPopup();
+        if (!popup.isOpen()) pins.get(id).marker.togglePopup();
+      }),
+      button('Destination', () => setField('destination', p)),
+      button('Remove', () => removeSaved(p.id))
+    );
+
+    card.append(row);
+    $('saved').append(card);
+  }
+}
+
+function removeSaved(id) {
+  saved = saved.filter(p => p.id !== id);
+  persist();
+
+  for (const [key, pin] of [...pins]) {
+    if (pin.data.savedId === id) {
+      pin.marker.remove();
+      pins.delete(key);
+    }
+  }
+
+  renderSaved();
+}
+
+function addPin(data, color = '#125b70') {
+  if (!valid(data.coordinates)) return null;
+  const id = ++serial;
+
+  const marker = new maplibregl.Marker({ color })
+    .setLngLat(data.coordinates)
+    .addTo(map);
+
+  pins.set(id, { data, marker });
+
+  const box = el('div');
+  const heading = el('h3', data.name || 'Dropped pin');
+  box.append(
+    heading,
+    el('p', data.address || coordText(data.coordinates))
+  );
+
+  box.append(
+    button('Start here', () => setField('origin', data)),
+    button('Go here', () => setField('destination', data)),
+    button('Save pin', () => {
+      const existing = saved.find(p =>
+        p.coordinates.every((n, i) =>
+          Math.abs(n - data.coordinates[i]) < .000001
+        )
+      );
+
+      if (!existing && saved.length >= 200) {
+        message('You can save up to 200 pins.', true);
+        return;
+      }
+
+      const name = prompt('Name this pin:', data.name || 'Saved pin');
+      if (!name?.trim()) return;
+
+      data.name = name.trim().slice(0, 160);
+      heading.textContent = data.name;
+
+      if (existing) {
+        existing.name = data.name;
+        data.savedId = existing.id;
+      } else {
+        const item = {
+          id: globalThis.crypto?.randomUUID?.() ||
+            `${Date.now()}-${serial}`,
+          name: data.name,
+          address: data.address || '',
+          coordinates: [...data.coordinates]
+        };
+        saved.push(item);
+        data.savedId = item.id;
+      }
+
+      const stored = persist();
+      renderSaved();
+
+      message(stored
+        ? 'Pin saved on this browser.'
+        : 'Pin saved for this visit only. Browser storage is unavailable.'
+      );
+    }),
+    button('Remove pin', () => {
+      if (data.savedId) removeSaved(data.savedId);
+      marker.remove();
+      pins.delete(id);
+    })
+  );
+
+  marker.setPopup(
+    new maplibregl.Popup({ offset: 24, closeOnClick: false })
+      .setDOMContent(box)
+  );
+
+  return id;
+}
+
+function clearRoute(invalidate = true) {
+  if (invalidate) routeVersion++;
+  routeData = [];
+  map.getSource('trip')?.setData({
+    type: 'FeatureCollection',
+    features: []
+  });
+  $('summary').textContent = '';
+  $('instructions').replaceChildren();
+  $('routeOptions').replaceChildren();
+}
+
+function endpoint(which, coords) {
+  endpointPins[which]?.remove();
+  endpointPins[which] = new maplibregl.Marker({
+    color: which === 'origin' ? '#27824a' : '#c44936'
+  }).setLngLat(coords).addTo(map);
+}
+
+function setField(which, place) {
+  if (which === 'origin') locationVersion++;
+  clearRoute();
+  fields[which] = {
+    name: place.name || 'Selected pin',
+    coordinates: [...place.coordinates]
+  };
+  $(which).value = place.name || coordText(place.coordinates);
+  endpoint(which, place.coordinates);
+
+  message(which === 'origin'
+    ? 'Starting point selected.'
+    : 'Destination selected.'
+  );
+}
+
+for (const which of ['origin', 'destination']) {
+  $(which).addEventListener('input', () => {
+    if (which === 'origin') locationVersion++;
+    fields[which] = null;
+    endpointPins[which]?.remove();
+    delete endpointPins[which];
+    clearRoute();
+  });
+}
+
+$('mode').addEventListener('change', () => clearRoute());
+
+map.on('click', event => {
+  if (event.originalEvent.target.closest(
+    '.maplibregl-marker,.maplibregl-popup,.maplibregl-control-container'
+  )) return;
+
+  const id = addPin({
+    name: 'Dropped pin',
+    coordinates: [event.lngLat.lng, event.lngLat.lat]
+  });
+
+  pins.get(id).marker.togglePopup();
+});
+
+for (const p of RESOURCE_PINS) addPin(p, '#d48d20');
+for (const p of saved) {
+  addPin({ ...p, savedId: p.id }, '#9657b3');
+}
+renderSaved();
+
+async function request(base, params) {
+  const url = new URL(base);
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== '' && value !== undefined) {
+      url.searchParams.set(key, value);
+    }
+  }
+
+  url.searchParams.set('apiKey', GEOAPIFY_API_KEY);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw Error(
+          'Geoapify access was denied. Check the API key and allowed domains.'
+        );
+      }
+
+      if (response.status === 429) {
+        throw Error('The request limit was reached. Please try later.');
+      }
+
+      throw Error(
+        `Search or routing could not complete (HTTP ${response.status}).`
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw Error('The request timed out. Please try again.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function discover(query) {
+  const center = map.getCenter();
+
+  const result = await request(
+    'https://api.geoapify.com/v1/geocode/search',
+    {
+      text: query,
+      bias: `proximity:${center.lng},${center.lat}`,
+      limit: 6,
+      lang: 'en',
+      format: 'json'
+    }
+  );
+
+  return (result.results || [])
+    .filter(item => valid([item.lon, item.lat]))
+    .map(item => ({
+      name: item.name || item.formatted || query,
+      address: item.formatted || '',
+      coordinates: [item.lon, item.lat]
+    }));
+}
+
+function fit(coords) {
+  if (!coords.length) return;
+
+  if (coords.length === 1) {
+    map.flyTo({ center: coords[0], zoom: 14 });
+    return;
+  }
+
+  const bounds = new maplibregl.LngLatBounds();
+  coords.forEach(c => bounds.extend(c));
+  map.fitBounds(bounds, { padding: 55, maxZoom: 15 });
+}
+
+$('searchForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const query = $('search').value.trim();
+  if (!query) return;
+
+  $('searchButton').disabled = true;
+  message('Searching…');
+
+  try {
+    const matches = await discover(query);
+    $('results').replaceChildren();
+
+    for (const id of searchPins) {
+      const pin = pins.get(id);
+      if (pin?.data.savedId) continue;
+      pin?.marker.remove();
+      pins.delete(id);
+    }
+    searchPins = [];
+
+    for (const place of matches) {
+      const id = addPin(place);
+      searchPins.push(id);
+
+      const card = el('div', undefined, 'result');
+      card.append(el('strong', place.name), el('p', place.address));
+      const row = el('div', undefined, 'row');
+
+      row.append(
+        button('Show pin', () => {
+          map.flyTo({ center: place.coordinates, zoom: 14 });
+          const marker = pins.get(id)?.marker;
+          if (marker && !marker.getPopup().isOpen()) {
+            marker.togglePopup();
+          }
+        }),
+        button('Start', () => setField('origin', place)),
+        button('Destination', () => setField('destination', place))
+      );
+
+      card.append(row);
+      $('results').append(card);
+    }
+
+    if (matches.length) {
+      fit(matches.map(p => p.coordinates));
+      message(`${matches.length} places found. Choose a pin or result.`);
+    } else {
+      message(
+        'No places found. Try a full street address or include the city.',
+        true
+      );
+    }
+  } catch (error) {
+    message(error.message, true);
+  } finally {
+    $('searchButton').disabled = false;
+  }
+});
+
+function duration(seconds) {
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  return minutes >= 60
+    ? `${Math.floor(minutes / 60)} hr ${minutes % 60} min`
+    : `${minutes} min`;
+}
+
+function distance(meters) {
+  return meters < 1609
+    ? `${Math.round(meters * 3.28084)} ft`
+    : `${(meters / 1609.344).toFixed(1)} mi`;
+}
+
+function clean(value) {
+  return new DOMParser()
+    .parseFromString(String(value || ''), 'text/html')
+    .body.textContent || '';
+}
+
+function routeTotals(route) {
+  return {
+    length: route.properties?.distance || 0,
+    seconds: route.properties?.time || 0
+  };
+}
+
+function renderRoute(index) {
+  const route = routeData[index];
+  if (!route) return;
+
+  const lines = route.geometry?.type === 'MultiLineString'
+    ? route.geometry.coordinates
+    : route.geometry?.type === 'LineString'
+      ? [route.geometry.coordinates]
+      : [];
+
+  if (!lines.some(line => line.length > 1)) {
+    throw Error('No route geometry was returned.');
+  }
+
+  const totals = routeTotals(route);
+  $('summary').textContent =
+    `${duration(totals.seconds)} · ${distance(totals.length)}`;
+  $('instructions').replaceChildren();
+
+  const bounds = new maplibregl.LngLatBounds();
+  lines.forEach(line => line.forEach(c => bounds.extend(c)));
+
+  const features = lines.map(line => ({
+    type: 'Feature',
+    properties: {
+      color: $('mode').value === 'transit' ? '#8d4bbb' : '#125b70'
+    },
+    geometry: { type: 'LineString', coordinates: line }
+  }));
+
+  map.getSource('trip').setData({
+    type: 'FeatureCollection',
+    features
+  });
+
+  map.fitBounds(bounds, { padding: 55, maxZoom: 16 });
+
+  for (const [i, leg] of (route.properties?.legs || []).entries()) {
+    const block = el('section');
+    block.append(el('h3', `Leg ${i + 1}`));
+    const list = el('ol');
+
+    for (const step of leg.steps || []) {
+      const text = clean(step.instruction?.text || '');
+      if (!text) continue;
+
+      const item = el('li', text);
+      const point = lines[i]?.[step.from_index];
+
+      if (point) {
+        item.append(' ', button('Show', () =>
+          map.flyTo({ center: point, zoom: 16 })
+        ));
+      }
+
+      list.append(item);
+    }
+
+    block.append(list.childElementCount
+      ? list
+      : el(
+          'p',
+          'Follow the highlighted route. Detailed instructions are unavailable.',
+          'small'
+        )
+    );
+
+    $('instructions').append(block);
+  }
+
+  [...$('routeOptions').children].forEach((b, i) =>
+    b.setAttribute('aria-pressed', String(i === index))
+  );
+
+  if ($('mode').value === 'transit') {
+    message(
+      'Transit route returned. Verify local service and schedules before traveling.'
+    );
+  }
+}
+
+function showChoices(which, matches) {
+  $('results').replaceChildren();
+  const label = which === 'origin' ? 'starting point' : 'destination';
+
+  $('results').append(el(
+    'p',
+    `Choose the ${label} you meant, then request directions again.`,
+    'small'
+  ));
+
+  for (const place of matches) {
+    const card = el('div', undefined, 'result');
+    card.append(
+      el('strong', place.name),
+      el('p', place.address),
+      button(`Use this ${label}`, () => {
+        setField(which, place);
+        $('results').replaceChildren();
+      })
+    );
+    $('results').append(card);
+  }
+}
+
+async function resolveField(which) {
+  if (fields[which]) return fields[which];
+
+  const query = $(which).value.trim();
+  const match = query.match(
+    /^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/
+  );
+
+  if (match) {
+    const coords = [Number(match[2]), Number(match[1])];
+    if (valid(coords)) return { name: query, coordinates: coords };
+  }
+
+  const results = await discover(query);
+
+  if (results.length !== 1) {
+    showChoices(which, results);
+
+    if (!results.length) {
+      throw Error(
+        `No ${which === 'origin' ? 'starting point' : 'destination'} found. Try a full address.`
+      );
+    }
+
+    throw Error(
+      'Several places match. Select the correct result before routing.'
+    );
+  }
+
+  return results[0];
+}
+
+$('routeForm').addEventListener('submit', async event => {
+  event.preventDefault();
+
+  if (!map.getSource('trip')) {
+    message('The map is still loading. Please try again.', true);
+    return;
+  }
+
+  const version = ++routeVersion;
+  $('routeButton').disabled = true;
+  clearRoute(false);
+  message('Planning your trip…');
+
+  try {
+    const start = await resolveField('origin');
+    if (version !== routeVersion) return;
+
+    const end = await resolveField('destination');
+    if (version !== routeVersion) return;
+
+    fields.origin = start;
+    fields.destination = end;
+    endpoint('origin', start.coordinates);
+    endpoint('destination', end.coordinates);
+
+    const mode = $('mode').value;
+    const modes = {
+      car: 'drive',
+      pedestrian: 'walk',
+      bicycle: 'bicycle',
+      transit: 'transit'
+    };
+
+    const response = await request(
+      'https://api.geoapify.com/v1/routing',
+      {
+        waypoints:
+          apiCoord(start.coordinates) + '|' + apiCoord(end.coordinates),
+        mode: modes[mode],
+        lang: 'en',
+        units: 'metric',
+        details: 'instruction_details'
+      }
+    );
+
+    if (version !== routeVersion) return;
+    routeData = response.features || [];
+
+    if (!routeData.length) {
+      throw Error(mode === 'transit'
+        ? 'No public transit route is available here. Try walking, cycling, or driving.'
+        : 'No route found. Try different locations or another travel method.'
+      );
+    }
+
+    $('routeOptions').replaceChildren();
+
+    routeData.forEach((route, i) => {
+      const totals = routeTotals(route);
+      const node = button(
+        `Route ${i + 1}: ${duration(totals.seconds)}`,
+        () => {
+          try {
+            renderRoute(i);
+          } catch (error) {
+            message(error.message, true);
+          }
+        }
+      );
+      node.setAttribute('aria-pressed', 'false');
+      $('routeOptions').append(node);
+    });
+
+    message('Trip ready. Route and written directions are shown below.');
+    renderRoute(0);
+  } catch (error) {
+    if (version === routeVersion) message(error.message, true);
+  } finally {
+    $('routeButton').disabled = false;
+  }
+});
+
+const LOCATION_HELPER = 'https://aid-room-location-helper.bitzkidd.chatgpt.site/';
+let locationRequest = null;
+window.addEventListener('message', event => {
+  const pending = locationRequest, data = event.data;
+  if (!pending || event.origin !== new URL(LOCATION_HELPER).origin || event.source !== pending.popup || !data || data.type !== 'AIDROOM_POPUP_LOCATION' || data.requestId !== pending.id) return;
+  if (data.error) { message(data.error, true); return; }
+  const coords = [data.longitude, data.latitude];
+  if (!coords.every(Number.isFinite) || !valid(coords)) return;
+  if (pending.version === locationVersion) {
+    setField('origin', {name:'My location', coordinates:coords});
+    map.flyTo({center:coords,zoom:14});
+    message('Your location is now the starting point. You can close the location window.');
+  }
+  locationRequest = null;
+});
+$('locate').addEventListener('click', () => {
+  const version = ++locationVersion;
+  const id = crypto.randomUUID();
+  const url = LOCATION_HELPER + '#origin=' + encodeURIComponent(location.origin) + '&request=' + encodeURIComponent(id);
+  const popup = window.open(url, 'aidroom_location', 'popup,width=480,height=650');
+  if (!popup) { message('Please allow pop-ups for this site and try again, or type your starting address.', true); return; }
+  locationRequest = {id, popup, version};
+  message('In the location window, press Allow location. If your map does not update, copy the coordinates there and paste them into Starting point.');
+});
+
+$('swap').addEventListener('click', () => {
+  locationVersion++;
+
+  const value = $('origin').value;
+  $('origin').value = $('destination').value;
+  $('destination').value = value;
+
+  const place = fields.origin;
+  fields.origin = fields.destination;
+  fields.destination = place;
+
+  for (const which of ['origin', 'destination']) {
+    endpointPins[which]?.remove();
+    delete endpointPins[which];
+
+    if (fields[which]) {
+      endpoint(which, fields[which].coordinates);
+    }
+  }
+
+  clearRoute();
+});
+
+$('clearRoute').addEventListener('click', () => {
+  clearRoute();
+  message('Route cleared.');
+});
+
+$('print').addEventListener('click', () => window.print());
+
+$('home').addEventListener('click', () =>
+  map.flyTo({ center: [-105.55, 39], zoom: 6 })
+);
+
+$('fitPins').addEventListener('click', () => {
+  const coords = [...pins.values()].map(p => p.data.coordinates);
+  if (coords.length) {
+    fit(coords);
+  } else {
+    message('Search for a place or click the map to add pins first.');
+  }
+});
+
+async function openResourceLocation() {
+  const params=new URLSearchParams(location.hash.slice(1));
+  const name=(params.get('name')||'').slice(0,250);
+  const address=(params.get('address')||'').slice(0,1000);
+  $('resourceName').textContent=name;
+  if(!address){message(name?'This resource has no public street address listed. Search for a location below; no automatic pin has been placed.':'Choose Open in Maps on a resource card to show its location.');return;}
+  const query=address.replace(/\([^)]*\)/g,'').replace(/\b(?:suite|ste|unit|floor|fl)\.?\s+[A-Za-z0-9-]+,?/gi,'').trim();
+  $('search').value=query.slice(0,250);
+  message('Finding the resource location…');
+  try {
+    const matches=await discover(query);
+    if(!matches.length){message('The address could not be located. Check or refine the address in Search.',true);return;}
+    const place={...matches[0],name:name||matches[0].name};
+    const id=addPin(place,'#c44936');
+    searchPins.push(id);
+    fields.destination={name:place.name,coordinates:[...place.coordinates]};
+    $('destination').value=place.name;
+    map.flyTo({center:place.coordinates,zoom:15});
+    pins.get(id).marker.togglePopup();
+    const card=el('div',undefined,'result');
+    card.append(el('strong',place.name),el('p',address),el('p','Map match: '+place.address));
+    $('results').replaceChildren(card);
+    message('Resource location pinned. Enter a starting point to plan your trip.');
+  } catch(error){message(error.message,true);}
+}
+map.on('load',openResourceLocation);
+message('Loading map…');
+
+window.addEventListener('unhandledrejection', () =>
+  message('Something could not load. Check your connection and try again.', true)
+);
+</script>
+</body>
+</html>
