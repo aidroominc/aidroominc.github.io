@@ -1069,7 +1069,9 @@ async function openResourceLocation() {
   $('search').value=query.slice(0,250);
   message('Finding the resource location…');
   try {
-    const matches=await discover(query);
+    const lat=Number(params.get('lat')),lon=Number(params.get('lon'));
+      const supplied=params.has('lat')&&params.has('lon')&&valid([lon,lat]);
+      const matches=supplied?[{name,address,coordinates:[lon,lat]}]:await discover(query);
     if(!matches.length){message('The address could not be located. Check or refine the address in Search.',true);return;}
     const place={...matches[0],name:name||matches[0].name};
     const id=addPin(place,'#c44936');
