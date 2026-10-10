@@ -191,7 +191,7 @@ details summary {
 <body>
 <div id="app">
   <aside>
-    <a href="index.html" style="display:inline-block;margin-bottom:14px;color:#125b70">← Back to Resource Navigator</a>
+    <a id="directoryBack" href="index.html?restore=1" style="display:inline-block;margin-bottom:14px;color:#125b70">← Back to Resource Navigator</a>
 <h1>Maps</h1>
 <p id="resourceName" style="font-weight:bold"></p>
     <p class="small">
@@ -304,6 +304,11 @@ const RESOURCE_PINS = [
 ];
 
 const $ = id => document.getElementById(id);
+$('directoryBack').addEventListener('click', event => {
+  let fromDirectory=false;
+  try{const previous=new URL(document.referrer);fromDirectory=previous.origin===location.origin&&/\/(?:index\.html)?$/.test(previous.pathname)}catch{}
+  if(fromDirectory&&history.length>1){event.preventDefault();history.back()}
+});
 
 function message(text, error = false) {
   $('status').textContent = text;
