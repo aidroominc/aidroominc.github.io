@@ -980,29 +980,35 @@ $('routeForm').addEventListener('submit', async event => {
   }
 });
 
-const LOCATION_HELPER = 'https://aid-room-location-helper.bitzkidd.chatgpt.site/';
-let locationRequest = null;
-window.addEventListener('message', event => {
-  const pending = locationRequest, data = event.data;
-  if (!pending || event.origin !== new URL(LOCATION_HELPER).origin || event.source !== pending.popup || !data || data.type !== 'AIDROOM_POPUP_LOCATION' || data.requestId !== pending.id) return;
-  if (data.error) { message(data.error, true); return; }
-  const coords = [data.longitude, data.latitude];
-  if (!coords.every(Number.isFinite) || !valid(coords)) return;
-  if (pending.version === locationVersion) {
-    setField('origin', {name:'My location', coordinates:coords});
-    map.flyTo({center:coords,zoom:14});
-    message('Your location is now the starting point. You can close the location window.');
-  }
-  locationRequest = null;
-});
 $('locate').addEventListener('click', () => {
+  if (!navigator.geolocation || !window.isSecureContext) {
+    message('Location access is unavailable in this browser. Enter your starting address instead.', true);
+    return;
+  }
   const version = ++locationVersion;
-  const id = crypto.randomUUID();
-  const url = LOCATION_HELPER + '#origin=' + encodeURIComponent(location.origin) + '&request=' + encodeURIComponent(id);
-  const popup = window.open(url, 'aidroom_location', 'popup,width=480,height=650');
-  if (!popup) { message('Please allow pop-ups for this site and try again, or type your starting address.', true); return; }
-  locationRequest = {id, popup, version};
-  message('In the location window, press Allow location. If your map does not update, copy the coordinates there and paste them into Starting point.');
+  $('locate').disabled = true;
+  message('Finding your location… Allow location access if your browser asks.');
+  navigator.geolocation.getCurrentPosition(position => {
+    $('locate').disabled = false;
+    if (version !== locationVersion) return;
+    const coords = [position.coords.longitude, position.coords.latitude];
+    if (!valid(coords)) {
+      message('Your location could not be determined. Try again or enter your starting address.', true);
+      return;
+    }
+    setField('origin', { name: 'My location', coordinates: coords });
+    map.flyTo({ center: coords, zoom: 14 });
+    message('Your location is now the starting point. Select Show directions on this map to plan your trip.');
+  }, error => {
+    $('locate').disabled = false;
+    if (version !== locationVersion) return;
+    const messages = {
+      1: 'Location access was not allowed. Enable location access for this site in your browser settings, or enter your starting address.',
+      2: 'Your location is unavailable. Check your device location settings, try again, or enter your starting address.',
+      3: 'Finding your location timed out. Try again or enter your starting address.'
+    };
+    message(messages[error.code] || 'Your location could not be determined. Enter your starting address instead.', true);
+  }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 });
 });
 
 $('swap').addEventListener('click', () => {
