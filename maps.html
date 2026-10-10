@@ -611,7 +611,7 @@ for (const p of saved) {
 }
 renderSaved();
 
-async function request(base, params) {
+async function request(base, params, options = {}) {
   const url = new URL(base);
 
   for (const [key, value] of Object.entries(params)) {
@@ -622,36 +622,45 @@ async function request(base, params) {
 
   url.searchParams.set('apiKey', GEOAPIFY_API_KEY);
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 25000);
-
-  try {
-    const response = await fetch(url, { signal: controller.signal });
-
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        throw Error(
-          'Geoapify access was denied. Check the API key and allowed domains.'
+  for (let attempt = 0; attempt < (options.retry ? 2 : 1); attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), options.timeout || 25000);
+  
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+  
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw Error(
+            'Geoapify access was denied. Check the API key and allowed domains.'
+          );
+        }
+  
+        if (response.status === 429) {
+          throw Error('The request limit was reached. Please try later.');
+        }
+  
+        const error = Error(
+          `Search or routing could not complete (HTTP ${response.status}).`
         );
+        error.retryable = response.status >= 500;
+        throw error;
       }
-
-      if (response.status === 429) {
-        throw Error('The request limit was reached. Please try later.');
+  
+      return await response.json();
+    } catch (error) {
+      const temporary = error.name === 'AbortError' || error instanceof TypeError || error.retryable;
+      if (temporary && options.retry && attempt === 0 && (!options.isCurrent || options.isCurrent())) {
+        options.onRetry?.();
+        continue;
       }
-
-      throw Error(
-        `Search or routing could not complete (HTTP ${response.status}).`
-      );
+      if (error.name === 'AbortError') {
+        throw Error(options.retry ? 'The directions service is taking too long to respond. Please try again in a moment.' : 'The request timed out. Please try again.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
     }
-
-    return await response.json();
-  } catch (error) {
-    if (error.name === 'AbortError') {
-      throw Error('The request timed out. Please try again.');
-    }
-    throw error;
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -956,6 +965,12 @@ async function planTrip(event) {
         lang: 'en',
         units: 'metric',
         details: 'instruction_details'
+      },
+      {
+        timeout: 60000,
+        retry: true,
+        isCurrent: () => version === routeVersion,
+        onRetry: () => message('The directions service is taking longer than usual. Retrying your ' + travelNames[mode].toLowerCase() + ' route…')
       }
     );
 
