@@ -8,3 +8,5 @@ Client intake stays on the original Wix site. Donations use the existing Zeffy a
 
 Keep a downloadable backup of this repository. The original Wix site remains independent. Domain renewal is separate from free hosting.
 
+
+Map links render immediately from map-pins.js, loaded before app.js. No visitor-side geocoding is used for directory cards. Pins are keyed by the exact physical address, so changing an address cannot reuse a stale pin. When adding or editing addresses, refresh the saved pin dataset before publishing; unmatched addresses have no Maps link. Saved Census matches locate the street address and may be interpolated rather than a building entrance.
