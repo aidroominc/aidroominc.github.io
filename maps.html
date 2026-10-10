@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Google Maps widget — Aid Room</title><style>*{box-sizing:border-box}body{margin:0;font:16px system-ui;background:#0a2230;color:white;display:flex;flex-direction:column;height:100dvh}header{padding:16px 20px;flex:none}h1{font-size:20px;margin:0}p{margin:8px 0 0;line-height:1.4}.help{font-size:14px;color:#c8d9de}iframe{display:block;width:100%;flex:1;min-height:320px;border:0;background:white}</style></head><body><header><h1>Google Maps</h1><p id="address"></p><p class="help">Explore this map here. Drag to move around, or use the map controls to zoom.</p></header><iframe id="map" title="Resource location on Google Maps" sandbox="allow-scripts allow-same-origin allow-presentation" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe><script>
+const query=new URLSearchParams(location.search).get('q')||'';
+document.getElementById('address').textContent=query||'No location provided.';
+if(query)document.getElementById('map').src='https://www.google.com/maps?q='+encodeURIComponent(query)+'&output=embed';
+</script></body></html>

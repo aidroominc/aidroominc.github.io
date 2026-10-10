@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Aid Room Community Resource Directory</title>
+  <meta name="description" content="Search Colorado and Denver metro community resources for housing, food, recovery, benefits, healthcare, and other needs.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%2350d8df' d='M32 3a22 22 0 0 0-22 22c0 17 22 36 22 36s22-19 22-36A22 22 0 0 0 32 3Z'/%3E%3Cpath fill='%230a2230' d='m18 27 14-12 14 12v16H35V32h-6v11H18V27Zm4 0v11h3V28h14v10h3V27L32 19Z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="site.css">
+  <style>.card-actions{flex-wrap:wrap}</style>
+</head>
+<body><a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="Aid Room home"><img class="site-logo" src="logo.png" alt="" width="52" height="52"><span><strong>AID ROOM</strong><small>Connecting crisis to care</small></span></a><nav class="site-nav" aria-label="Main navigation"><a href="index.html">Resource Navigator</a><a href="about.html">About</a><a href="help.html">Get help</a><a href="volunteer.html">Volunteer</a><a href="donate.html">Donate</a></nav>
+    <button class="shortlist-button" id="shortlistButton" type="button" aria-haspopup="dialog">
+      Saved resources <span id="shortlistCount">0</span>
+    </button>
+  </header>
+
+  <main id="content">
+    <section class="emergency" aria-label="Emergency contacts">
+      <strong>Immediate danger?</strong>
+      <a href="tel:911">Call 911</a>
+      <span>Behavioral health crisis</span>
+      <a href="tel:988">Call or text 988</a>
+    </section>
+
+    <section class="search-panel" aria-labelledby="pageTitle">
+      <div class="intro">
+        <p class="eyebrow">Colorado community resources</p>
+        <h1 id="pageTitle">Find help and community resources.</h1>
+        <p>Search by service, need, organization, location, or a phrase such as “family shelter in Aurora.”</p>
+      </div>
+      <label class="search-box" for="searchInput">
+        <span aria-hidden="true">⌕</span>
+        <input id="searchInput" type="search" autocomplete="off" placeholder="What does the client need?" autofocus>
+        <kbd>/</kbd>
+      </label>
+      <div class="quick-chips" id="quickChips" aria-label="Common searches"></div>
+      <div class="filters">
+        <label>Category<select id="categoryFilter"><option value="">All categories</option></select></label>
+        <label>Area<select id="areaFilter"><option value="">All service areas</option><option>Denver</option><option>Aurora</option><option>Adams</option><option>Arapahoe</option><option>Boulder</option><option>Broomfield</option><option>Douglas</option><option>Jefferson</option><option>Statewide</option></select></label>
+        <label for="zipFilter">ZIP code<input id="zipFilter" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="5" pattern="[0-9]{5}" placeholder="e.g. 80202" aria-describedby="zipHelp"></label>
+        <label class="check"><input id="freeFilter" type="checkbox"> Free or no fee</label>
+        <label class="check"><input id="openFilter" type="checkbox"> 24/7</label>
+        <button id="clearFilters" class="clear-button" type="button">Clear</button>
+      </div>
+      <p id="zipHelp" class="zip-help" role="status">Enter five digits to show resources with a matching address or listed service ZIP, plus statewide and nationwide services.</p>
+    </section>
+
+    <section class="results-section" aria-live="polite" aria-busy="true">
+      <div class="results-heading">
+        <div><span id="resultCount">Loading resources…</span><small id="activeSummary"></small></div>
+        <label>Sort<select id="sortSelect"><option value="relevance">Best match</option><option value="title">Name A–Z</option><option value="category">Category</option></select></label>
+      </div>
+      <div id="results" class="results"></div>
+      <button id="loadMore" class="load-more" type="button" hidden>Show more results</button>
+      <div id="emptyState" class="empty" hidden>
+        <span aria-hidden="true">⌕</span><h2>No exact matches</h2>
+        <p>Try fewer words, remove a filter, or search a broader need such as “housing,” “food,” or “benefits.”</p>
+        <button type="button" id="emptyClear">Clear search and filters</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p><strong>Use this directory as a starting point.</strong> Confirm hours, eligibility, funding, and availability directly with the provider before relying on a listing.</p>
+    <p>Colorado Community Resource Directory for Aid Room, Inc. · 13,366 resources · Expanded October 8, 2026</p>
+  </footer><footer class="site-footer"><div><strong>Aid Room, Inc.</strong><p>Connecting crisis to care and hope.</p><p>501(c)(3) organization · EIN: 41-2818999</p></div><div><a href="mailto:aidroominc@gmail.com">aidroominc@gmail.com</a><br><a href="tel:7205099629">720-509-9629</a><p><a href="https://www.facebook.com/aidroom" target="_blank" rel="noopener">Facebook</a> · <a href="https://www.linkedin.com/company/aid-room" target="_blank" rel="noopener">LinkedIn</a></p></div><div><a href="https://aidroominc.wixsite.com/home" target="_blank" rel="noopener">Our original free website</a><p>© 2026 Aid Room, Inc.</p></div></footer>
+
+  <dialog id="detailDialog" class="detail-dialog"><div id="detailContent"></div></dialog>
+  <dialog id="shortlistDialog" class="shortlist-dialog"><div id="shortlistContent"></div></dialog>
+  <dialog id="mapsDialog" class="shortlist-dialog" aria-labelledby="mapsTitle"><div class="dialog-head"><h2 id="mapsTitle">Open resource in Maps</h2><button class="close-dialog" type="button" aria-label="Close">×</button></div><div class="dialog-body"><p id="mapsResource"></p><label for="mapsLocation"><strong>Location to search</strong></label><textarea id="mapsLocation" rows="3" readonly></textarea><p>1. Select <strong>Copy &amp; open Maps</strong> below.</p><p>2. On the Maps page, paste into <strong>Search places or addresses</strong>, then select <strong>Search</strong>.</p><p id="mapsStatus" role="status" aria-live="polite"></p><div class="dialog-actions"><a id="copyMapLocation" href="https://aidroominc.wixsite.com/home/maps" target="_blank" rel="noopener noreferrer">Copy &amp; open Maps</a><a id="mapsContinue" class="secondary" href="https://aidroominc.wixsite.com/home/maps" target="_blank" rel="noopener noreferrer" hidden>Open Maps page</a></div></div></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js" defer></script>
+</body>
+</html>
