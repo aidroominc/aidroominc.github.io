@@ -1,0 +1,14 @@
+/* Board profiles belong only to the About page. */
+.board-section{padding-top:72px;padding-bottom:12px}
+.board-section .section-heading{max-width:900px;margin-bottom:34px}
+.board-members{display:grid;gap:26px}
+.board-member{display:grid;grid-template-columns:240px minmax(0,1fr);gap:42px;align-items:center;padding:30px;background:#fff;border:1px solid var(--line);border-radius:22px;overflow:hidden}
+.board-member:nth-child(2){background:var(--pale);border-color:#cce7e9}
+.board-portrait{border-radius:14px;overflow:hidden;background:#d9e7e9}
+.board-portrait img{display:block;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover}
+.board-bio{max-width:790px;min-width:0}
+.board-bio .board-role{color:var(--aqua-dark);font-size:.76rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin:0 0 10px}
+.board-bio h3{font-family:Georgia,"Times New Roman",serif;font-size:clamp(1.8rem,2.5vw,2.3rem);font-weight:400;letter-spacing:-.025em;line-height:1.2;margin:0 0 18px;color:var(--ink)}
+.board-bio p:last-child{font-size:1rem;line-height:1.85;color:var(--muted);margin:0}
+@media(max-width:1000px){.board-member{grid-template-columns:200px minmax(0,1fr);gap:28px;padding:26px;align-items:start}}
+@media(max-width:700px){.board-section{padding-top:48px}.board-member{grid-template-columns:1fr;gap:26px;padding:24px}.board-portrait{width:min(100%,280px)}.board-bio p:last-child{font-size:.96rem;line-height:1.8}.board-members{gap:20px}}
