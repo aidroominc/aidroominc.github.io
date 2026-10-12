@@ -202,7 +202,7 @@ details summary {
   #map { position: relative; height: 450px; }
 }
 </style>
-<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="192x192" href="/favicon.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"></head>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="192x192" href="/favicon.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><script src="activity.js?v=20261011-1" defer></script></head>
 
 <body>
 <div id="app">
@@ -1006,6 +1006,8 @@ async function planTrip(event) {
   }
 
   const version = ++routeVersion;
+  const activityStarted = performance.now();
+  window.aidActivity?.('route_request', {travel_mode: $('mode').value});
   $('routeButton').disabled = true;
   clearRoute(false);
   message(`Planning your ${travelNames[$('mode').value].toLowerCase()} trip…`);
@@ -1087,8 +1089,13 @@ async function planTrip(event) {
 
     message(`${travelNames[mode]} route ready. Route and written directions are shown below.`);
     renderRoute(0);
+    const activityTotals = routeTotals(routeData[0]);
+    window.aidActivity?.('route_success', {travel_mode:mode, distance_band:activityTotals.length < 1609 ? 'under_1_mile' : activityTotals.length < 8047 ? '1-5_miles' : activityTotals.length < 24140 ? '5-15_miles' : '15_plus_miles', duration_band:performance.now()-activityStarted < 5000 ? 'under_5_seconds' : performance.now()-activityStarted < 15000 ? '5-15_seconds' : '15_plus_seconds'});
   } catch (error) {
-    if (version === routeVersion) message(error.message, true);
+    if (version === routeVersion) {
+      window.aidActivity?.('route_error', {travel_mode:$('mode').value, error_type:/timeout|timed out|too long/i.test(error.message)?'timeout':/No route/i.test(error.message)?'no_route':'request_failed'});
+      message(error.message, true);
+    }
   } finally {
     if (version === routeVersion) $('routeButton').disabled = false;
   }
