@@ -8,6 +8,7 @@ vm.runInContext(read('map-pins.js')+'\n'+app.slice(app.indexOf('function mapAddr
 const records=JSON.parse(read('resource-files.json')).flatMap(file=>JSON.parse(read(file)).map(r=>({id:r.id,number:r.number,title:r.title,category:r.category,categoryNumber:r.categoryNumber,summary:r.summary,phones:r.phones.slice(0,1),emails:r.emails.slice(0,1),urls:r.urls.slice(0,1),fields:{'physical address':r.fields['physical address']||'','geographic service area':r.fields['geographic service area']||''},searchText:r.searchText,_file:file,_mapAddress:scope.mapAddress(r),_pin:scope.savedMapLocation(r)})));
 fs.writeFileSync(path.join(root,'directory-index-20261014.json'),JSON.stringify({encoding:'gzip-base64',data:zlib.gzipSync(Buffer.from(JSON.stringify(records)),{level:9}).toString('base64')}));
 let html=read('index.html');
+html=html.replace(/(<style id="directoryStyles">)[\s\S]*?(<\/style>)/,(_,a,b)=>a+read('styles.css')+'\n'+read('site.css')+b);
 html=html.replace(/(<div id="results" class="results">)[\s\S]*?(<\/div>\s*<button id="loadMore")/,(_,a,b)=>a+records.slice(0,16).map(r=>scope.card(r)).join('')+b);
 html=html.replace(/(<script type="application\/json" id="directoryBootstrap"[^>]*>)[\s\S]*?(<\/script>)/,(_,a,b)=>a.replace(/data-total="\d+"/, 'data-total="'+records.length+'"')+JSON.stringify(records.slice(0,16).map(({searchText,...r})=>r)).replace(/</g,'\\u003c')+b);
 html=html.replace(/(<span id="resultCount">)[\s\S]*?(<\/span>)/,(_,a,b)=>a+records.length.toLocaleString('en-US')+' resources'+b);
