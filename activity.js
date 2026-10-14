@@ -32,7 +32,9 @@
     if(id && !seen.has(id)) {seen.add(id);emit('resource_visible',{resource_id:id,resource_category:card.querySelector('.category-tag')?.textContent || ''});}
   }),{threshold:0.5});
   const results=document.getElementById('results');
-  new MutationObserver(()=>{observer.disconnect();results.querySelectorAll('.card').forEach(c=>observer.observe(c));}).observe(results,{childList:true});
+  function observeCards(){observer.disconnect();results.querySelectorAll('.card').forEach(c=>observer.observe(c));}
+  observeCards();
+  new MutationObserver(observeCards).observe(results,{childList:true});
   function context(el) {
     const box=el.closest('.card') || el.closest('#detailDialog');
     return {resource_id:el.dataset.open || el.dataset.save || el.dataset.mapResource || box?.querySelector('[data-open]')?.dataset.open || box?.dataset.resource || '',resource_category:box?.querySelector('.category-tag')?.textContent || ''};
