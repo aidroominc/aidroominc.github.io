@@ -19,3 +19,8 @@ Full address audit (2026-10-10): all 13,366 cards checked. 10,370 contain physic
 
 About, Help, Volunteer, and Donate use mission.css and mission.js for their responsive photo layouts and optional reduced-motion-aware animation. Header/footer markup and the shared site styles are unchanged. The Resource Navigator and Maps do not load these files. Licensed illustrative stock imagery is documented in PHOTO-CREDITS.md. Page-specific titles, descriptions, canonical links, social previews, and organization/page structured data are included. robots.txt points to sitemap.xml, which lists the main public pages and omits the hidden Maps page. The Help intake service and credentialless iframe are unchanged.
 
+
+## Directory performance (October 14, 2026)
+The first 16 cards, categories, and search shortcuts are rendered in index.html, so they appear before downloading the complete search index. directory-worker-20261014.js downloads and decompresses directory-index-20261014.json and runs the unchanged search scoring/filter logic off the main UI thread. The full search text is retained. Details load their original resource batch on demand and reuse it for subsequent profiles. Saved resources and Maps return-state restoration remain local to the visitor.
+
+IMPORTANT: After changing any resource batch or map-pins.js, run `node build-directory-index.cjs` and publish the regenerated directory-index-20261014.json and index.html along with the source changes. This refreshes compiled card addresses/pins and the initial cards. The original batches and map-pins.js remain the authoritative sources. The worker retains a fallback for browsers without gzip decompression. Do not manually edit the compressed index.
