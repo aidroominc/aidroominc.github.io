@@ -53,7 +53,8 @@
     return !q.trim()?'browse':topics.find(x=>x[1].test(q))?.[0] || 'other';
   }
   let timer;
-  function search() {clearTimeout(timer);timer=setTimeout(()=>{
+  function search() {clearTimeout(timer);timer=setTimeout(function recordSearch(){
+    if(results.parentElement?.getAttribute('aria-busy')==='true'){timer=setTimeout(recordSearch,250);return;}
     const n=parseInt(document.getElementById('resultCount').textContent,10);
     if(!Number.isFinite(n))return;
     emit('directory_search',{search_topic:topic(document.getElementById('searchInput').value),result_band:n===0?'zero':n<=10?'1-10':n<=50?'11-50':n<=200?'51-200':'201+',zip_filter:/^\d{5}$/.test(document.getElementById('zipFilter').value)?document.getElementById('zipFilter').value:'none'});
