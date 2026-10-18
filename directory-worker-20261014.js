@@ -6,7 +6,7 @@ export function loadDirectory() {
 async function readDirectory() {
   if (records) return records;
   if (typeof DecompressionStream === 'function') {
-    const response = await fetch('directory-index-20261014.json');
+    const response = await fetch('directory-index-20261014.json?v=20261018-provider-websites');
     if (!response.ok) throw new Error('Search index unavailable');
     const packed = await response.json();
     const bytes = Uint8Array.from(atob(packed.data), c => c.charCodeAt(0));
@@ -18,7 +18,7 @@ async function readDirectory() {
     const pinsText=await (await fetch('map-pins.js?v=20261011-fort-logan')).text();
     const pins=JSON.parse(pinsText.slice(pinsText.indexOf('Object.freeze(')+14,pinsText.lastIndexOf(');')));
     records = (await Promise.all(files.map(async file => {
-      const response = await fetch(file);
+      const response = await fetch(file+'?v=20261018-provider-websites');
       if (!response.ok) throw new Error('Resource data unavailable');
       return (await response.json()).map(r => ({...r, _file:file,_mapAddress:mapAddress(r),_pin:(()=>{const c=pins[mapAddress(r)];return c?{lat:c[0],lon:c[1]}:null})()}));
     }))).flat();

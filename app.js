@@ -74,7 +74,7 @@ async function showDetail(id){
   $('#detailContent').innerHTML='<div class="dialog-head"><h2>'+esc(r.title)+'</h2><button class="close-dialog" type="button" aria-label="Close">×</button></div><div class="dialog-body" role="status">Loading resource details…</div>';
   if(!$('#detailDialog').open)$('#detailDialog').showModal();
   try {
-   if(!profiles.has(r._file))profiles.set(r._file,fetch(r._file).then(response=>{if(!response.ok)throw Error('Profile unavailable');return response.json()}).catch(error=>{profiles.delete(r._file);throw error}));
+   if(!profiles.has(r._file))profiles.set(r._file,fetch(r._file+'?v=20261018-provider-websites').then(response=>{if(!response.ok)throw Error('Profile unavailable');return response.json()}).catch(error=>{profiles.delete(r._file);throw error}));
    const full=(await profiles.get(r._file)).find(x=>x.id===id);if(!full)throw Error('Profile unavailable');
    Object.assign(r,full,{_full:true});
    if(version!==detailVersion||!$('#detailDialog').open||$('#detailDialog').dataset.resource!==id)return;
@@ -86,10 +86,10 @@ function renderDetail(id){const r=state.resources.find(x=>x.id===id);if(!r)retur
 async function showShortlist(){let rs=state.resources.filter(r=>state.saved.has(r.id));if(rs.length!==state.saved.size){try{const result=await directoryRequest('lookup',{ids:[...state.saved]});rs=result.resources;for(const r of rs)if(!state.resources.some(x=>x.id===r.id))state.resources.push(r);}catch(error){toast('Saved resources could not be loaded. Please try again.');return;}}rs.sort((a,b)=>a.number-b.number);$("#shortlistContent").innerHTML=`<div class="dialog-head"><span class="category-tag">Your selections</span><h2>Saved resources</h2><p>${rs.length} saved resource${rs.length===1?"":"s"}</p><button class="close-dialog" type="button" aria-label="Close">×</button></div><div class="dialog-body">${rs.length?rs.map(r=>`<div class="shortlist-item"><div><strong>${esc(r.title)}</strong><small>${esc(r.phones[0]||r.urls[0]||r.category)}</small></div><button class="remove-item" data-save="${r.id}" type="button">Remove</button></div>`).join(""):'<div class="shortlist-empty">Use the star button to save useful resources here.</div>'}<div class="dialog-actions">${rs.length?'<button id="copyShortlist" type="button">Copy saved resources</button><button id="clearShortlist" class="secondary" type="button">Clear list</button>':""}</div></div>`;$("#shortlistDialog").showModal();$("#copyShortlist")?.addEventListener("click",()=>{const text=rs.map(r=>`${r.title}\n${r.phones[0]||""}${r.urls[0]?`\n${cleanUrl(r.urls[0])}`:""}\n${r.summary}`).join("\n\n");navigator.clipboard.writeText(text).then(()=>toast("Saved resources copied"))});$("#clearShortlist")?.addEventListener("click",()=>{state.saved.clear();saveState();showShortlist();render()})}
 async function init(){
  try {
-  directoryWorker=new Worker('directory-worker-20261014.js',{type:'module'});
+  directoryWorker=new Worker('directory-worker-20261014.js?v=20261018-provider-websites',{type:'module'});
   directoryWorker.onmessage=({data})=>{const pending=pendingRequests.get(data.id);if(!pending)return;pendingRequests.delete(data.id);data.error?pending.reject(Error(data.error)):pending.resolve(data)};
-  directoryWorker.onerror=async()=>{directoryWorker.terminate();try{inlineEngine=await import('./directory-worker-20261014.js');for(const pending of pendingRequests.values())pending.reject(Error('Search is restarting…'));pendingRequests.clear();await apply()}catch(error){$('#resultCount').textContent='The directory could not be loaded. Please refresh to try again.'}};
- }catch(error){inlineEngine=await import('./directory-worker-20261014.js')}
+  directoryWorker.onerror=async()=>{directoryWorker.terminate();try{inlineEngine=await import('./directory-worker-20261014.js?v=20261018-provider-websites');for(const pending of pendingRequests.values())pending.reject(Error('Search is restarting…'));pendingRequests.clear();await apply()}catch(error){$('#resultCount').textContent='The directory could not be loaded. Please refresh to try again.'}};
+ }catch(error){inlineEngine=await import('./directory-worker-20261014.js?v=20261018-provider-websites')}
  saveState();
  if(!history.state?.aidroomDirectoryView&&!new URLSearchParams(location.search).has('restore')){state.filtered=state.resources.slice(0,16);render()}
  await restoreDirectoryView();
