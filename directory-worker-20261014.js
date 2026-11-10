@@ -1,4 +1,5 @@
 // Keep the complete search corpus off the UI thread. No search or location leaves the browser.
+const hospitalFile = 'resources-colorado-hospitals.json';
 let records, loading;
 export function loadDirectory() {
   return loading ||= readDirectory().catch(error=>{loading=null;throw error});
@@ -11,19 +12,30 @@ async function readDirectory() {
     const packed = await response.json();
     const bytes = Uint8Array.from(atob(packed.data), c => c.charCodeAt(0));
     const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-    records = JSON.parse(await new Response(stream).text());
+    const indexed = JSON.parse(await new Response(stream).text());
+    const hospitals = indexed.some(resource => resource._file === hospitalFile)
+      ? []
+      : await readResourceBatch(hospitalFile);
+    records = indexed.concat(hospitals);
   } else {
     // Older browsers retain the original complete dataset and search behavior.
-    const files = await (await fetch('resource-files.json')).json();
+    const files = await (await fetch('resource-files.json?v=20261110-hospitals')).json();
     const pinsText=await (await fetch('map-pins.js?v=20261011-fort-logan')).text();
     const pins=JSON.parse(pinsText.slice(pinsText.indexOf('Object.freeze(')+14,pinsText.lastIndexOf(');')));
-    records = (await Promise.all(files.map(async file => {
-      const response = await fetch(file+'?v=20261018-provider-websites');
-      if (!response.ok) throw new Error('Resource data unavailable');
-      return (await response.json()).map(r => ({...r, _file:file,_mapAddress:mapAddress(r),_pin:(()=>{const c=pins[mapAddress(r)];return c?{lat:c[0],lon:c[1]}:null})()}));
-    }))).flat();
+    records = (await Promise.all(files.map(file => readResourceBatch(file, pins)))).flat();
   }
   return records;
+}
+async function readResourceBatch(file, pins = {}) {
+  const version = file === hospitalFile ? '20261110-hospitals' : '20261018-provider-websites';
+  const response = await fetch(file + '?v=' + version);
+  if (!response.ok) throw new Error('Resource data unavailable');
+  return (await response.json()).map(resource => {
+    const address = mapAddress(resource);
+    const coordinates = pins[address];
+    const pin = resource._pin || (coordinates ? {lat: coordinates[0], lon: coordinates[1]} : null);
+    return {...resource, _file: file, _mapAddress: address, _pin: pin};
+  });
 }
 export function searchResources(resources, state) {
   const terms = state.query.toLowerCase().replace(/[^a-z0-9+]+/g,' ').trim().split(/\s+/).filter(x=>x.length>1);
